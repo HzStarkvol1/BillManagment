@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1e1e1e;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .header h2 {
+            color: #ffffff;
+            font-size: 24px;
+        }
+
+        .btn-logout {
+            background-color: #d32f2f;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-logout:hover { background-color: #b71c1c; }
+
+        .top-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .top-row { flex-direction: column; }
+        }
+
+        .panel {
+            background-color: #1e1e1e;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .chart-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .form-panel {
+            flex: 1;
+        }
+
+        .panel h3 {
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #b0b0b0;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #a0a0a0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #3a3a3a;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-submit:hover { background-color: #5a5a5a; }
+
+        .list-panel {
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 14px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+        }
+        
+        th { color: #aaaaaa; }
+
+        .btn-delete {
+            background-color: #ff5252;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-delete:hover { background-color: #d50000; }
+        
+        .empty-state {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+        }
+
+        /* CUSTOM MODAL CSS */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-box {
+            background-color: #1e1e1e;
+            padding: 25px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            text-align: center; width: 320px;
+            border: 1px solid #333;
+        }
+        .modal-box p { color: #e0e0e0; margin-bottom: 25px; font-size: 16px; }
+        .modal-buttons { display: flex; justify-content: space-between; gap: 15px; }
+        .btn-modal-yes, .btn-modal-no {
+            flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: background-color 0.3s;
+        }
+        .btn-modal-yes { background-color: #d32f2f; }
+        .btn-modal-yes:hover { background-color: #b71c1c; }
+        .btn-modal-no { background-color: #555555; }
+        .btn-modal-no:hover { background-color: #777777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <h2>Financial Dashboard</h2>
+            <button onclick="confirmLogout()" class="btn-logout">Log Out</button>
+        </header>
+
+        <!-- TOP PANEL (FORM & CHART) -->
+        <div class="top-row">
+            <!-- FORMS -->
+            <div class="panel form-panel">
+                <h3>New Bill Form</h3>
+                <form action="/dashboard/addBill" method="post" th:object="${newBill}">
+                    <div class="form-group">
+                        <label for="category">Category (e.g. Electric, Water, Internet)</label>
+                        <input type="text" id="category" th:field="*{category}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost">Amount</label>
+                        <input type="number" step="0.01" id="cost" th:field="*{cost}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" th:field="*{date}" class="form-control" required>
+                    </div>
+                    <!-- Type=button instead of submit to prevent default trigger before modal -->
+                    <button type="button" class="btn-submit" onclick="confirmFormSubmit(event, 'Are you sure you want to add this bill?')">Add to System</button>
+                </form>
+            </div>
+
+            <!-- CHART -->
+            <div class="panel chart-panel">
+                <h3>Total Expenses by Category</h3>
+                <div class="chart-container">
+                    <canvas id="billsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECORDS (LIST) -->
+        <div class="panel list-panel">
+            <h3>Current Bills</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th style="width: 80px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${billsList == null or billsList.empty}">
+                        <td colspan="4" class="empty-state">No bills recorded yet.</td>
+                    </tr>
+                    <tr th:each="bill : ${billsList}">
+                        <td th:text="${bill.category}">Category</td>
+                        <td th:text="${bill.date}">YYYY-MM-DD</td>
+                        <td th:text="${bill.cost} + ' $'">0.00 $</td>
+                        <td>
+                            <form th:action="@{/dashboard/deleteBill/{id}(id=${bill.id})}" method="post">
+                                <button type="button" class="btn-delete" onclick="confirmFormSubmit(event, 'Are you sure you want to delete this bill?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CUSTOM MODAL HTML -->
+    <div class="modal-overlay" id="customModal">
+        <div class="modal-box">
+            <p id="modalMessage">Are you sure?</p>
+            <div class="modal-buttons">
+                <button class="btn-modal-yes" id="modalBtnYes">Yes</button>
+                <button class="btn-modal-no" id="modalBtnNo">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Block -->
+    <script th:inline="javascript">
+        // Custom Modal Logic
+        let modalConfirmAction = null;
+
+        function showCustomModal(message, actionCallback) {
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('customModal').style.display = 'flex';
+            modalConfirmAction = actionCallback;
+        }
+
+        document.getElementById('modalBtnNo').addEventListener('click', function() {
+            document.getElementById('customModal').style.display = 'none';
+            modalConfirmAction = null;
+        });
+
+        document.getElementById('modalBtnYes').addEventListener('click', function() {
+            document.getElementById('customModal').style.display = 'none';
+            if (modalConfirmAction) {
+                modalConfirmAction();
+            }
+        });
+
+        function confirmLogout() {
+            showCustomModal("Are you sure you want to log out?", function() {
+                window.location.href = '/';
+            });
+        }
+
+        function confirmFormSubmit(event, message) {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            showCustomModal(message, function() {
+                form.submit();
+            });
+        }
+
+        /*<![CDATA[*/
+        const rawBills = /*[[${billsList}]]*/ [];
+        /*]]>*/
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('billsChart').getContext('2d');
+            
+            if (!rawBills || rawBills.length === 0) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['No Record'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#2a2a2a']
+                        }]
+                    },
+                    options: { 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { labels: { color: '#888' } }, tooltip: { enabled: false } } 
+                    }
+                });
+                return;
+            }
+
+            const categoryData = {};
+            rawBills.forEach(b => {
+                const cat = b.category || 'Unspecified';
+                const val = parseFloat(b.cost) || 0;
+                categoryData[cat] = (categoryData[cat] || 0) + val;
+            });
+
+            const chartLabels = Object.keys(categoryData);
+            const chartValues = Object.values(categoryData);
+
+            const bgColors = [
+                '#4fc3f7', '#81c784', '#ffb74d', '#e57373', 
+                '#ba68c8', '#a1887f', '#90a4ae', '#fff176'
+            ];
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartValues,
+                        backgroundColor: bgColors.slice(0, chartLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#1e1e1e'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#e0e0e0',
+                                font: { size: 12, family: "'Segoe UI', sans-serif" }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label + ': ' + context.parsed + ' $';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
